@@ -6,37 +6,58 @@
 #include <sys/wait.h>
 #include <string.h>
 
+
+#define NUM_PROCESSES 10
+#define BLOCK_SIZE    5
+
+static void write_block(int index)
+{
+    char text[BLOCK_SIZE + 1]; /* Buffer to hold the formatted string */
+    snprintf(text, sizeof(text), "%05d", index*11111); /* Format the index as a 5-digit number */
+
+    /* Open the file in write-only mode */
+    int fd = open("output.txt", O_WRONLY);
+    if (fd == -1) {
+        perror("open");
+        exit(1);
+    }
+    /* Move the file pointer to the correct position and write the block */
+    lseek(fd, index * BLOCK_SIZE, SEEK_SET);
+    write(fd, text, BLOCK_SIZE);
+    close(fd);
+}
+
 int main(void)
 {
-    int fd1,fd2,i,pos;
-    char c;
-    char buffer[6];
+    int fd, i;
 
-    fd1 = open("output.txt", O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR);
-    write(fd1, "00000", 5);
-    for (i=1; i < 10; i++) {
-        pos = lseek(fd1, 0, SEEK_CUR);
+    fd = open("output.txt", O_CREAT | O_TRUNC | O_RDWR, S_IRUSR | S_IWUSR);
+    if (fd == -1) {
+        perror("open");
+        return 1;
+    }
+    close(fd);                         /* el fichero ya existe y está vacío */
+
+    /* Create child processes to write their blocks */
+    for (i=1; i < NUM_PROCESSES; i++) {
         if (fork() == 0) {
-            /* Child */
-            sprintf(buffer, "%d", i*11111);
-            lseek(fd1, pos, SEEK_SET);
-            write(fd1, buffer, 5);
-            close(fd1);
-            exit(0);
-        } else {
-            /* Parent */
-            lseek(fd1, 5, SEEK_CUR);
+            write_block(i); /* escribe su bloque en el fichero */
+            exit(0);        /* termina el proceso hijo */
         }
     }
+    /* Write the block for the parent process */
+    write_block(0);
 
-	//wait for all childs to finish
+	/* Wait for all child processes to finish */
     while (wait(NULL) != -1);
 
-    lseek(fd1, 0, SEEK_SET);
+    /* Read and print the contents of the file */
+    fd = open("output.txt", O_RDONLY);
     printf("File contents are:\n");
-    while (read(fd1, &c, 1) > 0)
-        printf("%c", (char) c);
+    char c;
+    while (read(fd, &c, sizeof(c)) > 0)
+        printf("%c", c);
     printf("\n");
-    close(fd1);
-    exit(0);
+    close(fd);
+    return(0);
 }
