@@ -1,0 +1,16 @@
+# ignorar todo...
+*
+# ...excepto carpetas y estos tipos de fichero
+!*/
+!.gitignore
+!*.c
+!*.h
+!*.pdf
+!*.txt
+!*.md
+!Makefile
+!makefile
+!test*
+!check_*
+!*.mp4
+!*.svg
