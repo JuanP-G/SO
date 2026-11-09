@@ -1,6 +1,6 @@
 # PR4 · Procesos, hilos, señales y ficheros
 
-Cuatro ejercicios con `fork`/`exec`/`wait`, `pthread`, señales y escritura concurrente en un fichero.
+Enunciado en [practica4.pdf](practica4.pdf) y transparencias en [practica4slides.pdf](practica4slides.pdf). Cuatro ejercicios con `fork`/`exec`/`wait`, `pthread`, señales y escritura concurrente en un fichero.
 
 | Ejercicio | Carpeta | Contenido |
 |---|---|---|

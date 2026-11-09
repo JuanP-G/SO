@@ -6,11 +6,12 @@ Material de la asignatura **Sistemas Operativos** (UCM): apuntes de C y terminal
 
 | | Bloque | Qué hay | Enunciado | Notas | Vídeos |
 |---|---|---|---|---|---|
-| <img src="assets/icons/book.svg" width="24" height="24" align="absmiddle"> | [Fundamentos](fundamentos/) | C, terminal, entorno y herramientas | | Sí | |
+| <img src="assets/icons/note.svg" width="24" height="24" align="absmiddle"> | [Temario](temario/) | Teoría (módulos 1 a 3) y hojas de ejercicios | | PDF | |
+| <img src="assets/icons/book.svg" width="24" height="24" align="absmiddle"> | [Fundamentos](fundamentos/) | C, terminal, entorno, herramientas y guías | | Sí | |
 | <img src="assets/icons/file.svg" width="24" height="24" align="absmiddle"> | [PR1 · Introducción](practicas/PR1-introduccion/) | Ejercicios 1 a 4 y manual | [pdf](practicas/PR1-introduccion/practica1.pdf) | [Runbook ej. 1](practicas/PR1-introduccion/ejercicio1-runbook.md) | |
 | <img src="assets/icons/file.svg" width="24" height="24" align="absmiddle"> | [PR2 · Ficheros stdio](practicas/PR2-ficheros_stdio/) | Ejercicios 1 a 3 | [pdf](practicas/PR2-ficheros_stdio/practica2.pdf) | [Corrección](practicas/PR2-ficheros_stdio/correccion-comentada.md) | |
 | <img src="assets/icons/file.svg" width="24" height="24" align="absmiddle"> | [PR3 · Procesos e hilos](practicas/PR3-procesos_e_hilos/) | Ejercicios 1 a 4 con `check_*` | [pdf](practicas/PR3-procesos_e_hilos/practica3.pdf) | | |
-| <img src="assets/icons/process.svg" width="24" height="24" align="absmiddle"> | [PR4 · Procesos, hilos, señales y ficheros](practicas/PR4-sincronizacion-hilos/) | Ejercicios 1 a 4 | | [Corrección](practicas/PR4-sincronizacion-hilos/correccion-comentada.md) | [5 vídeos](practicas/PR4-sincronizacion-hilos/videos/) |
+| <img src="assets/icons/process.svg" width="24" height="24" align="absmiddle"> | [PR4 · Procesos, hilos, señales y ficheros](practicas/PR4-sincronizacion-hilos/) | Ejercicios 1 a 4 | [pdf](practicas/PR4-sincronizacion-hilos/practica4.pdf) | [Corrección](practicas/PR4-sincronizacion-hilos/correccion-comentada.md) | [5 vídeos](practicas/PR4-sincronizacion-hilos/videos/) |
 | <img src="assets/icons/sync.svg" width="24" height="24" align="absmiddle"> | [PR5 · Sincronización de hilos](practicas/PR5-sincronizacion_de_hilos/) | Discoteca con mutex y condiciones | [pdf](practicas/PR5-sincronizacion_de_hilos/practica5.pdf) | [Explicación](practicas/PR5-sincronizacion_de_hilos/explicacion.md) | [vídeo](practicas/PR5-sincronizacion_de_hilos/videos/discoteca.mp4) |
 
 ## Mapa por temas
@@ -33,7 +34,9 @@ Material de la asignatura **Sistemas Operativos** (UCM): apuntes de C y terminal
 .
 ├── README.md
 ├── assets/                          iconos y banner (SVG)
+├── temario/                         teoría y hojas de ejercicios (PDF)
 ├── fundamentos/
+│   ├── guias/                       guías de entorno y máquina virtual (PDF)
 │   ├── c/                           apuntes de C (01-06)
 │   ├── terminal/                    apuntes de terminal (01-05)
 │   ├── entorno-de-trabajo.md
