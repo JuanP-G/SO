@@ -21,42 +21,52 @@ static int next_normal_ticket = 0, normal_turn = 0;
 
 void enter_normal_client(int id)
 {
+	/* Los clientes normales esperan a que no haya vips esperando y a que haya espacio en la disco */
 	pthread_mutex_lock(&mutex);
 	int my_ticket = next_normal_ticket++;
 	printf("Client %2d (not vip) waiting at the door\n", id);
+	/* Esperamos a que sea nuestro turno y que haya espacio en la disco */
 	while (my_ticket != normal_turn || inside >= CAPACITY || vip_waiting > 0)
 		pthread_cond_wait(&changed, &mutex);
+	/* Una vez que es nuestro turno y hay espacio, entramos */
 	normal_turn++;
 	inside++;
 	printf("Client %2d (not vip) ENTERS  [inside: %d/%d]\n", id, inside, CAPACITY);
+	/* Avisamos a los demás hilos de que ha cambiado el estado */
 	pthread_cond_broadcast(&changed);
 	pthread_mutex_unlock(&mutex);
 }
 
 void enter_vip_client(int id)
 {
+	/* Los clientes vip tienen prioridad sobre los normales */
 	pthread_mutex_lock(&mutex);
 	int my_ticket = next_vip_ticket++;
 	vip_waiting++;
 	printf("Client %2d (  vip  ) waiting at the door\n", id);
+	/* Esperamos a que sea nuestro turno y que haya espacio en la disco */
 	while (my_ticket != vip_turn || inside >= CAPACITY)
 		pthread_cond_wait(&changed, &mutex);
+	/* Una vez que es nuestro turno y hay espacio, entramos */
 	vip_waiting--;
 	vip_turn++;
 	inside++;
 	printf("Client %2d (  vip  ) ENTERS  [inside: %d/%d]\n", id, inside, CAPACITY);
+	/* Avisamos a los demás hilos de que ha cambiado el estado */
 	pthread_cond_broadcast(&changed);
 	pthread_mutex_unlock(&mutex);
 }
 
 void dance(int id, int isvip)
 {
+	/* Bailamos un tiempo aleatorio */
 	printf("Client %2d (%s) dancing in disco\n", id, VIPSTR(isvip));
 	sleep((rand() % 3) + 1);
 }
 
 void disco_exit(int id, int isvip)
 {
+	/* Salimos de la disco*/
 	pthread_mutex_lock(&mutex);
 	inside--;
 	printf("Client %2d (%s) LEAVES   [inside: %d/%d]\n", id, VIPSTR(isvip), inside, CAPACITY);
@@ -66,9 +76,11 @@ void disco_exit(int id, int isvip)
 
 void *client(void *arg)
 {
+	/* Copiamos los argumentos y liberamos la memoria */
 	struct client_args args = *(struct client_args *)arg;
 	free(arg);
 
+	/* Procesamos el cliente */
 	if (args.isvip)
 		enter_vip_client(args.id);
 	else
@@ -80,15 +92,20 @@ void *client(void *arg)
 
 int main(int argc, char *argv[])
 {
+	/* Comprobación de argumentos y apertura del fichero */
 	if (argc != 2) {
 		fprintf(stderr, "Uso: %s fichero\n", argv[0]);
 		return 1;
 	}
+
+	/* Abrimos el fichero y leemos el número de clientes */
 	FILE *file = fopen(argv[1], "r");
 	if (file == NULL) {
 		perror("fopen");
 		return 1;
 	}
+
+	/* Leemos el número de clientes */
 	int num_clients;
 	if (fscanf(file, "%d", &num_clients) != 1 || num_clients <= 0) {
 		fprintf(stderr, "Fichero con formato incorrecto\n");
@@ -96,16 +113,20 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+	/* Leemos los datos de los clientes */
 	pthread_t *threads = malloc(num_clients * sizeof(pthread_t));
 	for (int id = 0; id < num_clients; id++) {
+		/* Creamos un struct para pasar los argumentos al hilo */
 		struct client_args *args = malloc(sizeof(*args));
 		args->id = id;
+		/* Leemos si el cliente es vip o no */
 		if (fscanf(file, "%d", &args->isvip) != 1) {
 			fprintf(stderr, "Faltan clientes en el fichero\n");
 			free(args);
 			num_clients = id;
 			break;
 		}
+		/* Creamos el hilo */
 		int err = pthread_create(&threads[id], NULL, client, args);
 		if (err != 0) {
 			fprintf(stderr, "pthread_create: %d\n", err);
@@ -114,11 +135,14 @@ int main(int argc, char *argv[])
 			break;
 		}
 	}
+	/* Esperamos a que todos los hilos terminen */
 	fclose(file);
 
+	/* Unimos los hilos */
 	for (int id = 0; id < num_clients; id++)
 		pthread_join(threads[id], NULL);
 
+	/* Liberamos la memoria */
 	free(threads);
 	pthread_mutex_destroy(&mutex);
 	pthread_cond_destroy(&changed);
