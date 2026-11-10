@@ -2,7 +2,7 @@
 
 # P5 · Discoteca con aforo y VIP
 
-Un solo ejercicio: **M hilos cliente**, aforo **N = 5**, clientes `vip` y normales.
+Un solo ejercicio: **M hilos cliente**, aforo **N = 5**, clientes `vip` y normales. Vídeo explicativo: [discoteca.mp4](videos/discoteca.mp4).
 
 ## 1. Qué nos dan (`disco.c`)
 
@@ -22,10 +22,10 @@ Solo el esqueleto: `CAPACITY 5`, `VIPSTR`, `dance()` (printf + sleep) y funcione
 |---|---|
 | `pthread_mutex_t` | exclusión mutua: solo un hilo toca los contadores a la vez |
 | `pthread_cond_wait(&cond, &mutex)` | suelta el mutex y duerme; al despertar lo recupera |
-| `pthread_cond_broadcast(&cond)` | despierta a TODOS los dormidos |
+| `pthread_cond_broadcast(&cond)` | despierta a TODOS los dormidos de esa condición |
 | `while` (no `if`) | al despertar hay que **volver a comprobar** la condición |
 
-Una sola variable de condición (`changed`) + `broadcast` en cada cambio de estado: simple y correcto (cada hilo re-comprueba su propia condición).
+**Dos variables de condición**, una por cola: `normal_changed` (banco de los normales) y `vip_changed` (banco de los VIP). Así un aviso solo despierta a quien tiene opciones de entrar.
 
 ## 4. Estado compartido (todo protegido por `mutex`)
 
@@ -38,158 +38,40 @@ Una sola variable de condición (`changed`) + `broadcast` en cada cambio de esta
 
 ## 5. Cómo funciona cada función
 
-**`enter_vip_client`**: coge el mutex, saca ticket, `vip_waiting++`, espera mientras `ticket != vip_turn || inside >= CAPACITY`. Al entrar: `vip_waiting--`, `vip_turn++`, `inside++`, `broadcast`.
+**`wake_next()`**: decide a quién avisar según **quién puede entrar**, no según quién acaba de salir. Si `vip_waiting > 0` hace `broadcast` a `vip_changed`; si no, a `normal_changed`. Se llama siempre con el mutex cogido.
 
-**`enter_normal_client`**: igual, pero espera mientras `ticket != normal_turn || inside >= CAPACITY || vip_waiting > 0`.
+**`enter_vip_client`**: coge el mutex, saca ticket, `vip_waiting++`, espera en `vip_changed` mientras `ticket != vip_turn || inside >= CAPACITY`. Al entrar: `vip_waiting--`, `vip_turn++`, `inside++` y `wake_next()` si aún hay sitio.
+
+**`enter_normal_client`**: igual, pero espera en `normal_changed` mientras `ticket != normal_turn || inside >= CAPACITY || vip_waiting > 0`.
 
 **`dance`**: **sin** el mutex cogido (si no, nadie podría entrar ni salir).
 
-**`disco_exit`**: mutex, `inside--`, `broadcast`.
+**`disco_exit`**: mutex, `inside--`, `wake_next()`.
 
-**Por qué `broadcast` también al entrar**: al entrar un VIP, `vip_waiting` baja o `vip_turn` sube, y eso puede desbloquear al siguiente VIP o a los normales.
+**Por qué `wake_next()` en los tres sitios**:
+
+| Dónde | Qué cambia | Qué puede desbloquear |
+|---|---|---|
+| `disco_exit` | `inside--` | aparece un **hueco** |
+| `enter_*` | `vip_turn++`, `normal_turn++` o `vip_waiting--` | cambia **a quién le toca** (el siguiente VIP, o los normales cuando `vip_waiting` llega a 0) |
+
+Al entrar solo se avisa si `inside < CAPACITY`: con la sala llena nadie más puede pasar y el siguiente `disco_exit` ya avisará.
 
 **`client`**: copia los argumentos (`struct client_args`) a la pila, hace `free(arg)`, y llama a `enter_*` -> `dance` -> `disco_exit`.
 
-**`main`**: `fopen` + `fscanf` (M y luego un 0/1 por cliente), un `malloc` por hilo para sus argumentos (así no hay carrera con una variable compartida), `pthread_create` (comprueba el error), `pthread_join` de todos, y al final `destroy` de mutex y cond.
+**`main`**: `fopen` + `fscanf` (M y luego un 0/1 por cliente), un `malloc` por hilo para sus argumentos (así no hay carrera con una variable compartida), `pthread_create` (comprueba el error), `pthread_join` de todos, y al final `destroy` de mutex y conds.
 
 ## 6. Código de solución
 
-```c
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <pthread.h>
-
-#define CAPACITY 5
-#define VIPSTR(vip) ((vip) ? "  vip  " : "not vip")
-
-struct client_args {
-	int id;
-	int isvip;
-};
-
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t  changed = PTHREAD_COND_INITIALIZER;
-
-static int inside = 0;          /* clientes dentro */
-static int vip_waiting = 0;     /* vips esperando */
-static int next_vip_ticket = 0, vip_turn = 0;
-static int next_normal_ticket = 0, normal_turn = 0;
-
-void enter_normal_client(int id)
-{
-	pthread_mutex_lock(&mutex);
-	int my_ticket = next_normal_ticket++;
-	printf("Client %2d (not vip) waiting at the door\n", id);
-	while (my_ticket != normal_turn || inside >= CAPACITY || vip_waiting > 0)
-		pthread_cond_wait(&changed, &mutex);
-	normal_turn++;
-	inside++;
-	printf("Client %2d (not vip) ENTERS  [inside: %d/%d]\n", id, inside, CAPACITY);
-	pthread_cond_broadcast(&changed);
-	pthread_mutex_unlock(&mutex);
-}
-
-void enter_vip_client(int id)
-{
-	pthread_mutex_lock(&mutex);
-	int my_ticket = next_vip_ticket++;
-	vip_waiting++;
-	printf("Client %2d (  vip  ) waiting at the door\n", id);
-	while (my_ticket != vip_turn || inside >= CAPACITY)
-		pthread_cond_wait(&changed, &mutex);
-	vip_waiting--;
-	vip_turn++;
-	inside++;
-	printf("Client %2d (  vip  ) ENTERS  [inside: %d/%d]\n", id, inside, CAPACITY);
-	pthread_cond_broadcast(&changed);
-	pthread_mutex_unlock(&mutex);
-}
-
-void dance(int id, int isvip)
-{
-	printf("Client %2d (%s) dancing in disco\n", id, VIPSTR(isvip));
-	sleep((rand() % 3) + 1);
-}
-
-void disco_exit(int id, int isvip)
-{
-	pthread_mutex_lock(&mutex);
-	inside--;
-	printf("Client %2d (%s) LEAVES   [inside: %d/%d]\n", id, VIPSTR(isvip), inside, CAPACITY);
-	pthread_cond_broadcast(&changed);
-	pthread_mutex_unlock(&mutex);
-}
-
-void *client(void *arg)
-{
-	struct client_args args = *(struct client_args *)arg;
-	free(arg);
-
-	if (args.isvip)
-		enter_vip_client(args.id);
-	else
-		enter_normal_client(args.id);
-	dance(args.id, args.isvip);
-	disco_exit(args.id, args.isvip);
-	return NULL;
-}
-
-int main(int argc, char *argv[])
-{
-	if (argc != 2) {
-		fprintf(stderr, "Uso: %s fichero\n", argv[0]);
-		return 1;
-	}
-	FILE *file = fopen(argv[1], "r");
-	if (file == NULL) {
-		perror("fopen");
-		return 1;
-	}
-	int num_clients;
-	if (fscanf(file, "%d", &num_clients) != 1 || num_clients <= 0) {
-		fprintf(stderr, "Fichero con formato incorrecto\n");
-		fclose(file);
-		return 1;
-	}
-
-	pthread_t *threads = malloc(num_clients * sizeof(pthread_t));
-	for (int id = 0; id < num_clients; id++) {
-		struct client_args *args = malloc(sizeof(*args));
-		args->id = id;
-		if (fscanf(file, "%d", &args->isvip) != 1) {
-			fprintf(stderr, "Faltan clientes en el fichero\n");
-			free(args);
-			num_clients = id;
-			break;
-		}
-		int err = pthread_create(&threads[id], NULL, client, args);
-		if (err != 0) {
-			fprintf(stderr, "pthread_create: %d\n", err);
-			free(args);
-			num_clients = id;
-			break;
-		}
-	}
-	fclose(file);
-
-	for (int id = 0; id < num_clients; id++)
-		pthread_join(threads[id], NULL);
-
-	free(threads);
-	pthread_mutex_destroy(&mutex);
-	pthread_cond_destroy(&changed);
-	return 0;
-}
-```
+Es el mismo que [ejercicio1/disco.c](ejercicio1/disco.c).
 
 ## 7. Prueba realizada
 
-Con `grande.txt` (14 clientes, 5 vips): el máximo `inside` impreso fue **5/5** y el orden de entrada fue
+Con `grande.txt` (14 clientes, 4 vips: 6, 8, 9 y 11): el máximo `inside` impreso fue **5/5** y una ejecución dio este orden de entrada:
 
-`1 0 2 3 4` (normales que llegaron primero) -> `8 6 9 11` (VIPs, se saltan a los normales que esperaban) -> `5 7 13 12 10` (normales restantes).
+`0 4 3 7 2` (normales que llegaron primero) -> `6 8 11 9` (VIPs, se saltan a los normales que esperaban) -> `10 5 1 12 13` (normales restantes).
 
-Compilar y ejecutar: `make && ./disco ejemplo.txt` .
+El orden exacto de los normales depende de qué hilo llega antes a la puerta, por eso cambia entre ejecuciones. Compilar y ejecutar: `make && ./disco grande.txt`.
 
 ## 8. Errores típicos
 
@@ -197,7 +79,8 @@ Compilar y ejecutar: `make && ./disco ejemplo.txt` .
 |---|---|
 | `if` en vez de `while` alrededor de `cond_wait` | entra alguien sin cumplir la condición |
 | Bailar con el mutex cogido | todos bloqueados, nadie entra/sale |
-| Olvidar `broadcast` al salir (o al entrar) | clientes dormidos para siempre |
+| Avisar solo en `disco_exit` y no en `enter_*` | puede quedar un hueco libre con clientes dormidos |
+| Avisar solo a quien sale (VIP o normal) en vez de a quien puede entrar | cuelgue: se despierta al banco equivocado |
 | Un único `int` compartido para los argumentos del hilo | carrera: dos hilos con el mismo `id` |
 | Normal sin comprobar `vip_waiting` | los VIP no tienen prioridad |
 | Sin turnos | no se respeta el orden de llegada |
