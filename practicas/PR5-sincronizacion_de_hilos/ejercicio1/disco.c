@@ -11,13 +11,22 @@ struct client_args {
 	int isvip;
 };
 
-static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t  changed = PTHREAD_COND_INITIALIZER;
+static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;				/* mutex para proteger el acceso a la disco */
+static pthread_cond_t  normal_changed = PTHREAD_COND_INITIALIZER; 		/* condición para avisar de cambios en el estado de la disco */
+static pthread_cond_t  vip_changed = PTHREAD_COND_INITIALIZER;			/* condición para avisar de cambios en el estado de la disco para vips */
 
 static int inside = 0;          /* clientes dentro */
 static int vip_waiting = 0;     /* vips esperando */
-static int next_vip_ticket = 0, vip_turn = 0;
-static int next_normal_ticket = 0, normal_turn = 0;
+static int next_vip_ticket = 0, vip_turn = 0; 		/* tickets y turnos para vips */
+static int next_normal_ticket = 0, normal_turn = 0; /* tickets y turnos para normales */
+
+static void wake_next(void)
+{
+	if (vip_waiting > 0)
+		pthread_cond_broadcast(&vip_changed);
+	else
+		pthread_cond_broadcast(&normal_changed);
+}
 
 void enter_normal_client(int id)
 {
@@ -27,13 +36,12 @@ void enter_normal_client(int id)
 	printf("Client %2d (not vip) waiting at the door\n", id);
 	/* Esperamos a que sea nuestro turno y que haya espacio en la disco */
 	while (my_ticket != normal_turn || inside >= CAPACITY || vip_waiting > 0)
-		pthread_cond_wait(&changed, &mutex);
+		pthread_cond_wait(&normal_changed, &mutex);
 	/* Una vez que es nuestro turno y hay espacio, entramos */
 	normal_turn++;
 	inside++;
 	printf("Client %2d (not vip) ENTERS  [inside: %d/%d]\n", id, inside, CAPACITY);
-	/* Avisamos a los demás hilos de que ha cambiado el estado */
-	pthread_cond_broadcast(&changed);
+	if (inside < CAPACITY) wake_next();
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -46,14 +54,13 @@ void enter_vip_client(int id)
 	printf("Client %2d (  vip  ) waiting at the door\n", id);
 	/* Esperamos a que sea nuestro turno y que haya espacio en la disco */
 	while (my_ticket != vip_turn || inside >= CAPACITY)
-		pthread_cond_wait(&changed, &mutex);
+		pthread_cond_wait(&vip_changed, &mutex);
 	/* Una vez que es nuestro turno y hay espacio, entramos */
 	vip_waiting--;
 	vip_turn++;
 	inside++;
 	printf("Client %2d (  vip  ) ENTERS  [inside: %d/%d]\n", id, inside, CAPACITY);
-	/* Avisamos a los demás hilos de que ha cambiado el estado */
-	pthread_cond_broadcast(&changed);
+	if (inside < CAPACITY) wake_next();
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -70,7 +77,9 @@ void disco_exit(int id, int isvip)
 	pthread_mutex_lock(&mutex);
 	inside--;
 	printf("Client %2d (%s) LEAVES   [inside: %d/%d]\n", id, VIPSTR(isvip), inside, CAPACITY);
-	pthread_cond_broadcast(&changed);
+	/* Avisamos a los demás hilos de que ha cambiado el estado, no ponemos condicion porque sabemos que hay espacio */
+	wake_next();
+	/* Avisamos a los demás hilos de que ha cambiado el estado */
 	pthread_mutex_unlock(&mutex);
 }
 
@@ -85,6 +94,7 @@ void *client(void *arg)
 		enter_vip_client(args.id);
 	else
 		enter_normal_client(args.id);
+	/* Bailamos un tiempo aleatorio */
 	dance(args.id, args.isvip);
 	disco_exit(args.id, args.isvip);
 	return NULL;
@@ -145,6 +155,7 @@ int main(int argc, char *argv[])
 	/* Liberamos la memoria */
 	free(threads);
 	pthread_mutex_destroy(&mutex);
-	pthread_cond_destroy(&changed);
+	pthread_cond_destroy(&normal_changed);
+	pthread_cond_destroy(&vip_changed);
 	return 0;
 }
