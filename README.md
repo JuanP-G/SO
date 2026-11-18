@@ -76,3 +76,13 @@ Cada carpeta de ejercicio incluye su `Makefile`; `make clean` borra los binarios
 ## Sobre los vídeos
 
 Cada vídeo explica un ejercicio con animaciones y metáforas. La narración es voz sintética en español, por lo que alguna palabra técnica puede sonar rara. Los archivos pesan entre 4 y 13 MB.
+
+## Web del repositorio
+
+Web estática generada desde este repositorio con [`sitio/construir.py`](sitio/construir.py) y el workflow [`.github/workflows/web.yml`](.github/workflows/web.yml) cada vez que cambia `main`. Usa la hoja de estilo compartida de todas las asignaturas (`sitio/estilo/`). En local:
+
+```bash
+pip install markdown
+python3 sitio/construir.py                      # genera sitio/_site/
+python3 -m http.server -d sitio/_site 8000
+```
