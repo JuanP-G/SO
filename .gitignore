@@ -14,4 +14,8 @@
 !check_*
 !*.mp4
 !*.svg
+# generador de la web y su estilo (se suben); la salida generada no
+!sitio/construir.py
+!sitio/estilo/*
+!.github/workflows/*.yml
 sitio/_site/
