@@ -14,3 +14,10 @@
 !check_*
 !*.mp4
 !*.svg
+!*.py
+!*.css
+!*.js
+!*.yml
+!*.png
+!*.html
+sitio/_site/
