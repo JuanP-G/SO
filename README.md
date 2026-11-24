@@ -13,6 +13,7 @@ Material de la asignatura **Sistemas Operativos** (UCM): apuntes de C y terminal
 | <img src="assets/icons/file.svg" width="24" height="24" align="absmiddle"> | [PR3 · Procesos e hilos](practicas/PR3-procesos_e_hilos/) | Ejercicios 1 a 4 con `check_*` | [pdf](practicas/PR3-procesos_e_hilos/practica3.pdf) | | |
 | <img src="assets/icons/process.svg" width="24" height="24" align="absmiddle"> | [PR4 · Procesos, hilos, señales y ficheros](practicas/PR4-sincronizacion-hilos/) | Ejercicios 1 a 4 | [pdf](practicas/PR4-sincronizacion-hilos/practica4.pdf) | [Corrección](practicas/PR4-sincronizacion-hilos/correccion-comentada.md) | [5 vídeos](practicas/PR4-sincronizacion-hilos/videos/) |
 | <img src="assets/icons/sync.svg" width="24" height="24" align="absmiddle"> | [PR5 · Sincronización de hilos](practicas/PR5-sincronizacion_de_hilos/) | Discoteca con mutex y condiciones | [pdf](practicas/PR5-sincronizacion_de_hilos/practica5.pdf) | [Explicación](practicas/PR5-sincronizacion_de_hilos/explicacion.md) | [vídeo](practicas/PR5-sincronizacion_de_hilos/videos/discoteca.mp4) |
+| <img src="assets/icons/sync.svg" width="24" height="24" align="absmiddle"> | [PR6 · Semáforos y memoria compartida](practicas/PR6-semaforos_y_memoria_compartida/) | Salvajes y cocinero con procesos | [pdf](practicas/PR6-semaforos_y_memoria_compartida/practica6.pdf) | [Guía y solución](practicas/PR6-semaforos_y_memoria_compartida/guia.md) | [vídeo](practicas/PR6-semaforos_y_memoria_compartida/videos/salvajes.mp4) |
 
 ## Mapa por temas
 
@@ -27,6 +28,7 @@ Material de la asignatura **Sistemas Operativos** (UCM): apuntes de C y terminal
 | <img src="assets/icons/signal.svg" width="20" height="20" align="absmiddle"> alarm, kill, sigaction | [PR4 · ejercicio 3](practicas/PR4-sincronizacion-hilos/ejercicio3/) |
 | <img src="assets/icons/file.svg" width="20" height="20" align="absmiddle"> lseek, pwrite, descriptores | [PR4 · ejercicio 4](practicas/PR4-sincronizacion-hilos/ejercicio4/) |
 | <img src="assets/icons/sync.svg" width="20" height="20" align="absmiddle"> mutex, variables de condición | [PR5](practicas/PR5-sincronizacion_de_hilos/) |
+| <img src="assets/icons/sync.svg" width="20" height="20" align="absmiddle"> semáforos con nombre, shm_open, mmap | [PR6](practicas/PR6-semaforos_y_memoria_compartida/) |
 
 ## Estructura
 
@@ -46,7 +48,8 @@ Material de la asignatura **Sistemas Operativos** (UCM): apuntes de C y terminal
     ├── PR2-ficheros_stdio/
     ├── PR3-procesos_e_hilos/
     ├── PR4-sincronizacion-hilos/
-    └── PR5-sincronizacion_de_hilos/
+    ├── PR5-sincronizacion_de_hilos/
+    └── PR6-semaforos_y_memoria_compartida/
         ├── README.md                índice de la práctica
         ├── practicaN.pdf            enunciado
         ├── ejercicioN/              código propio y Makefile
